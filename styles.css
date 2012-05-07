@@ -1,0 +1,36 @@
+#page-report-session-index td.numviews {text-align:right;}
+#page-report-session-index tr.section {text-align: center;}
+#page-report-session-index td.lastaccess {font-size: 0.8em;}
+
+#page-report-session-user .section .content {margin-left: 30px;margin-right: 30px;}
+#page-report-session-user .section h2 {margin-top: 0;}
+#page-report-session-user .section {margin-left: 30px;margin-right: 30px;margin-bottom: 20px;}
+#page-report-session-user .section {border-width:1px;border-style:solid;padding:10px;}
+
+#page-report-session-detail .section .content {margin-left: 30px;margin-right: 30px;}
+#page-report-session-detail .section h2 {margin-top: 0;}
+#page-report-session-detail .section {margin-left: 30px;margin-right: 30px;margin-bottom: 20px;}
+#page-report-session-detail .section {border-width:1px;border-style:solid;padding:10px;}
+
+.report-session-summary-box {
+    right:15px;
+    padding: 15px;
+    border-radius: 5px;
+    border: solid 1px gray;
+    position: absolute;
+}
+
+.report-session-lastlogtime {
+    position: relative;
+    top: 30px;
+    margin: auto;
+    text-align: center;
+    clear:both;
+    width: 100%;
+    font-size: .8em;
+}
+
+.online-tag {
+    font-size: .8em;
+    color: green;
+}
