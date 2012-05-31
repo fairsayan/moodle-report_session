@@ -52,6 +52,7 @@ EOD;
 
 //Title
 echo $OUTPUT->heading($course->fullname);
+echo '<div class="submain">(<a href="export_xls.php?id=' . $id . '">' . get_string('download_excel', 'report_session') . '</a>)</div>';
 
 // Content
 // Users table

@@ -50,6 +50,8 @@ EOD;
 
 //Title
 echo $OUTPUT->heading(format_string("$course->shortname: " . $cminfo->cms[$cmid]->name));
+echo '<div class="submain">(<a href="export_xls.php?id=' . $id . '">' . get_string('download_excel', 'report_session') . '</a>)</div>';
+
 
 if (count($aggregated_sessions) > 1) { // if there is something should be at least 2 records: one is userid specific computation, the other user generic
     $str_user_header = get_string('user');

@@ -25,3 +25,5 @@ $string['users_table'] = 'Users table';
 $string['sessions'] = 'Sessions';
 $string['never_calculated'] = 'Last update: never calculated or nothing to report';
 $string['last_update'] = 'Last update';
+
+$string['download_excel'] = 'Download excel version';

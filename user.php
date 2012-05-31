@@ -51,6 +51,7 @@ EOD;
 //Title
 echo $OUTPUT->heading(format_string("$course->shortname: " . fullname($user)));
 if (report_session_is_user_online($userid)) report_session_print_online_tag('text-align:center');
+echo '<div class="submain">(<a href="export_xls.php?id=' . $id . '">' . get_string('download_excel', 'report_session') . '</a>)</div>';
 
 $cms = get_course_mods($id);
 $modinfo = get_fast_modinfo($course);

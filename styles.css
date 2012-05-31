@@ -12,6 +12,14 @@
 #page-report-session-detail .section {margin-left: 30px;margin-right: 30px;margin-bottom: 20px;}
 #page-report-session-detail .section {border-width:1px;border-style:solid;padding:10px;}
 
+.submain {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    position: relative;
+    margin-top: -1em;
+}
+
 .report-session-summary-box {
     right:15px;
     padding: 15px;

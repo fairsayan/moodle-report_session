@@ -40,7 +40,7 @@ $PAGE->set_title($course->shortname .': '. $strreport);
 $PAGE->set_heading($strreport);
 echo $OUTPUT->header();
 echo $OUTPUT->heading($title);
-
+echo '<div class="submain">(<a href="export_xls.php?id=' . $id . '">' . get_string('download_excel', 'report_session') . '</a>)</div>';
 
 // Content
 $conditions['course'] = $id;
