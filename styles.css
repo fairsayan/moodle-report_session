@@ -28,9 +28,11 @@
     position: absolute;
 }
 
+.pagelayout-report #report-main-content .region-content  .report-session-summary-box table {
+    background-color: inherit;
+}
+
 .report-session-lastlogtime {
-    position: relative;
-    top: 30px;
     margin: auto;
     text-align: center;
     clear:both;
@@ -41,4 +43,17 @@
 .online-tag {
     font-size: .8em;
     color: green;
+}
+
+.online-color {color: green;}
+.offline-color {color: red;}
+.general-color {color: black;}
+
+.sessiontable {
+    margin:auto;
+}
+
+.see-details {
+    font-size: .8em;
+    text-align: center;
 }

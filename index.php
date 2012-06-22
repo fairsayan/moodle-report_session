@@ -1,6 +1,6 @@
 <?php
 /**
- * Display user session reports for a course (totals)
+ * This file contains functions used by the session reports
  *
  * @package    report
  * @subpackage session
@@ -10,106 +10,167 @@
  */
 
 require('../../config.php');
+require_once($CFG->dirroot.'/course/lib.php');
 require_once($CFG->dirroot.'/report/session/locallib.php');
+require_once($CFG->libdir.'/adminlib.php');
 
-// Setup params
-$id = required_param('id',PARAM_INT);       // course id
-$course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
-$strreport = get_string('pluginname', 'report_session');
-$conditions = array('course' => $id);
-$aggregated_sessions = $DB->get_records('report_session_aggregate', $conditions);
-$sql_users_in_course = "SELECT DISTINCT u.*
-    FROM {user_enrolments} ue 
-    JOIN {enrol} e ON (e.id = ue.enrolid) 
-    JOIN {user} u ON (ue.userid = u.id) WHERE e.courseid = :courseid ORDER BY u.lastname";
-$users = $DB->get_records_sql($sql_users_in_course,  array('courseid' => $id));
+$id          = optional_param('id', 0, PARAM_INT);// Course ID
+$host_course = optional_param('host_course', '', PARAM_PATH);// Course ID
 
-// Check access and log user
-require_login($course);
-$context = get_context_instance(CONTEXT_COURSE, $course->id);
-require_capability('report/session:view', $context);
-add_to_log($course->id, 'course', 'report session', "report/session/index.php?id=$course->id");
+if (empty($host_course)) {
+    $hostid = $CFG->mnet_localhost_id;
+    if (empty($id)) {
+        $site = get_site();
+        $id = $site->id;
+    }
+} else {
+    list($hostid, $id) = explode('/', $host_course);
+}
 
-// Page settings
-$PAGE->set_url('/report/session/index.php', array('id'=>$id));
+$group       = optional_param('group', 0, PARAM_INT); // Group to display
+$user        = optional_param('user', 0, PARAM_INT); // User to display
+$date        = optional_param('date', 0, PARAM_INT); // Date to display
+$modname     = optional_param('modname', '', PARAM_PLUGIN); // course_module->id
+$modid       = optional_param('modid', 0, PARAM_FILE); // number or 'site_errors'
+$type        = optional_param('type', 'all', PARAM_ALPHA); // session type
+$page        = optional_param('page', '0', PARAM_INT);     // which page to show
+$perpage     = optional_param('perpage', '100', PARAM_INT); // how many per page
+$showcourses = optional_param('showcourses', 0, PARAM_INT); // whether to show courses if we're over our limit.
+$showusers   = optional_param('showusers', 0, PARAM_INT); // whether to show users if we're over our limit.
+$chooselog   = optional_param('chooselog', 0, PARAM_INT);
+$logformat   = optional_param('logformat', 'showashtml', PARAM_ALPHA);
+
+$params = array();
+if ($id !== 0) {
+    $params['id'] = $id;
+}
+if ($host_course !== '') {
+    $params['host_course'] = $host_course;
+}
+if ($group !== 0) {
+    $params['group'] = $group;
+}
+if ($user !== 0) {
+    $params['user'] = $user;
+}
+if ($date !== 0) {
+    $params['date'] = $date;
+}
+if ($modname !== '') {
+    $params['modname'] = $modname;
+}
+if ($modid !== 0) {
+    $params['modid'] = $modid;
+}
+
+if ($page !== '0') {
+    $params['page'] = $page;
+}
+if ($perpage !== '100') {
+    $params['perpage'] = $perpage;
+}
+if ($showcourses !== 0) {
+    $params['showcourses'] = $showcourses;
+}
+if ($showusers !== 0) {
+    $params['showusers'] = $showusers;
+}
+if ($chooselog !== 0) {
+    $params['chooselog'] = $chooselog;
+}
+if ($logformat !== 'showashtml') {
+    $params['logformat'] = $logformat;
+}
+$PAGE->set_url('/report/session/index.php', $params);
 $PAGE->set_pagelayout('report');
-$PAGE->set_title($course->shortname .': '. $strreport);
-$PAGE->set_heading($strreport);
-echo $OUTPUT->header();
 
-//Over title string: total time
-$total_session = $DB->get_record('report_session_aggregate', array_merge($conditions, array('cmid' => 0, 'userid' => 0)));
-$total_time = ($total_session)?format_time($total_session->duration):0;
-$total_str = get_string('total') . " ";
-$total_str .= "<a href=\"detail.php?id=$id\">";
-$total_str .= strtolower(get_string('course')  . " " . get_string('time')) . '</a>';
-echo <<<EOD
-    <div class="report-session-summary-box">
-        $total_str: $total_time
-    </div>
+if ($hostid == $CFG->mnet_localhost_id) {
+    $course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
 
-EOD;
+} else {
+    $course_stub       = $DB->get_record('mnet_log', array('hostid'=>$hostid, 'course'=>$id), '*', true);
+    $course->id        = $id;
+    $course->shortname = $course_stub->coursename;
+    $course->fullname  = $course_stub->coursename;
+}
 
-//Title
-echo $OUTPUT->heading($course->fullname);
-echo '<div class="submain">(<a href="export_xls.php?id=' . $id . '">' . get_string('download_excel', 'report_session') . '</a>)</div>';
+require_login($course);
 
-// Content
-// Users table
-echo '<div style="float:left;width: 50%"><h2 class="main">' . get_string('users_table', 'report_session')  . '</h2>';
-if (!empty($users)) {
-    $str_user_header = get_string('user');
-    $str_duration_header = get_string('duration', 'report_session');
+$context = get_context_instance(CONTEXT_COURSE, $course->id);
 
-    $users_table = new html_table();
-    $users_table->attributes['class'] = 'generaltable boxaligncenter';
-    $users_table->cellpadding = 5;
-    $users_table->id = 'users_table';
-    $users_table->head = array($str_user_header, $str_duration_header);
-    foreach ($users as $user) {
-        $duration = 0;
-        foreach ($aggregated_sessions as $session) {
-            if (($session->userid == $user->id) && ($session->cmid == 0)) $duration = $session->duration;
-            if ($duration > 0) break; //found something
-        }
-        $row['user'] = "<a href=\"user.php?id=$id&userid=$user->id\">" . fullname($user) . '</a>';
-        if (report_session_is_user_online($user->id)) $row['user'] .= report_session_print_online_tag();
-        $row['duration'] = ($duration)?format_time ($duration):'0';
-        $users_table->data[] = $row;
+require_capability('report/session:view', $context);
+
+add_to_log($course->id, "course", "report session", "report/session/index.php?id=$course->id", $course->id);
+
+$strlogs = get_string('sessions', 'report_session');
+$stradministration = get_string('administration');
+$strreports = get_string('reports');
+
+session_get_instance()->write_close();
+
+if (!empty($chooselog)) {
+    $userinfo = get_string('allparticipants');
+    $dateinfo = get_string('alldays');
+
+    if ($user) {
+        $u = $DB->get_record('user', array('id'=>$user, 'deleted'=>0), '*', MUST_EXIST);
+        $userinfo = fullname($u, has_capability('moodle/site:viewfullnames', $context));
     }
-    echo html_writer::table($users_table);
-} else echo $OUTPUT->notification(get_string('nothingtodisplay'));
-echo '</div>';
+    if ($date) {
+        $dateinfo = userdate($date, get_string('strftimedaydate'));
+    }
 
-// Activities table
-echo '<div style="float:right;width: 50%"><h2 class="main">' . get_string('activities_table', 'report_session')  . '</h2>';
-$cms = get_course_mods($id);
-$modinfo = get_fast_modinfo($course);
-if (!empty($cms)) {
-    $str_activity_header = get_string('activity');
-    $str_duration_header = get_string('duration', 'report_session');
+    switch ($logformat) {
+        case 'showashtml':
+            if ($hostid != $CFG->mnet_localhost_id || $course->id == SITEID) {
+                admin_externalpage_setup('reportlog');
+                echo $OUTPUT->header();
 
-    $activities_table = new html_table();
-    $activities_table->attributes['class'] = 'generaltable boxaligncenter';
-    $activities_table->cellpadding = 5;
-    $activities_table->id = 'activities_table';
-    $activities_table->head = array($str_activity_header, $str_duration_header);
-    unset($row);
-    foreach ($cms as $cm) {
-        $cminfo = $modinfo->cms[$cm->id];
-        $row['activity'] = "<a href=\"cm.php?id=$id&cmid=$cm->id\">" . $cminfo->name . '</a>';
-        $row['duration'] = 0;
-        foreach ($aggregated_sessions as $session) { // looking for correct session
-            if (($session->userid != 0)||($session->cmid != $cm->id)) continue;
-            $row['duration'] = format_time ($session->duration);
+            } else {
+                $PAGE->set_title($course->shortname .': '. $strlogs);
+                $PAGE->set_heading($course->fullname);
+                $PAGE->navbar->add("$userinfo, $dateinfo");
+                echo $OUTPUT->header();
+            }
+
+            echo $OUTPUT->heading(format_string($course->fullname) . ": $userinfo, $dateinfo (".usertimezone().")");
+//            report_session_print_mnet_selector_form($hostid, $course, $user, $date, $modname, $modid, $group, $showcourses, $showusers, $logformat);
+
+            report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, $showusers, $logformat);
+            
+            if ($hostid == $CFG->mnet_localhost_id) {
+                report_session_print_sessions($course, $user, $date, $type, 'starttime DESC', $page, $perpage,
+                        "index.php?id=$course->id&amp;chooselog=1&amp;user=$user&amp;date=$date&amp;modid=$modid&amp;type=$type&amp;group=$group",
+                        $modid, $group);
+            } else {
+//                print_mnet_log($hostid, $id, $user, $date, 'starttime DESC', $page, $perpage, "", $modname, $modid, $group);
+            }
+            report_session_print_forceupdate(($user)?$u->id:NULL, $course->id, $modid);
+            
             break;
-        }
-        $activities_table->data[] = $row;
+        case 'downloadasexcel':
+            if (!report_session_excel_sessions($course, $user, $date, $type, 'starttime DESC', $modid, $group)) {
+                echo $OUTPUT->notification("No logs found!");
+                echo $OUTPUT->footer();
+            }
+            exit;
     }
-    echo html_writer::table($activities_table);
-} else echo $OUTPUT->notification(get_string('nothingtodisplay'));
-echo '</div>';
 
-report_session_print_forceupdate(NULL, $id, NULL);
+
+} else {
+    if ($hostid != $CFG->mnet_localhost_id || $course->id == SITEID) {
+        admin_externalpage_setup('reportlog', '', null, '', array('pagelayout'=>'report'));
+        echo $OUTPUT->header();
+    } else {
+        $PAGE->set_title($course->shortname .': '. $strlogs);
+        $PAGE->set_heading($course->fullname);
+        echo $OUTPUT->header();
+    }
+
+    echo $OUTPUT->heading(get_string('choosesessions', 'report_session') .':');
+
+    report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, 1, $logformat);
+}
 
 echo $OUTPUT->footer();
+

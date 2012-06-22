@@ -23,7 +23,14 @@ $string['activities_table'] = 'Activities table';
 $string['users_table'] = 'Users table';
 
 $string['sessions'] = 'Sessions';
+$string['choosesessions'] = 'Choose which sessions you want to see';
 $string['never_calculated'] = 'Last update: never calculated or nothing to report';
 $string['last_update'] = 'Last update';
 
 $string['download_excel'] = 'Download excel version';
+
+$string['online'] = 'online';
+$string['offline'] = 'offline';
+$string['all_session_types'] = 'All types of session';
+$string['session_type'] = 'Session type';
+$string['see_details'] = '(see details)';

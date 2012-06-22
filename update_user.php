@@ -15,4 +15,4 @@ require_once($CFG->dirroot.'/report/session/locallib.php');
 $userid = required_param('id', PARAM_INT);       // userid id
 
 require_login();
-report_session_update_user_sessions ($userid, false);
+report_session_update_user_sessions ($userid, true);
