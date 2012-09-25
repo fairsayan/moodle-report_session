@@ -11,9 +11,6 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-define('REPORT_SESSION_TIMEOUT', 1800);
-define('REPORT_SESSION_EXTRATIME_WITHOUT_LOGOUT', 900);
-
 function report_session_print_selector_form($course, $selecteduser=0, $selecteddate='today',
                 $modname="", $modid=0, $type='all', $selectedgroup=-1, $showcourses=0, $showusers=0, $logformat='showashtml') {
 
@@ -455,7 +452,8 @@ function report_session_get_paged ($userid, $course, $cmid, $type, $date, $order
     }
     
     if ($cmid !== 0) array_push($str_offline_conditions, 'od.cmid = :ocmid');
-    array_push($str_conditions, 'rs.cmid = :cmid');
+    if ($cmid !== 0) array_push($str_conditions, 'rs.cmid = :cmid');
+        else array_push($str_conditions, 'rs.cmid <> :cmid'); 
 
     if ($courseid !== 0) array_push($str_offline_conditions, 'o.course = :ocourseid');
     array_push($str_conditions, 'rs.course =  :courseid');
@@ -528,15 +526,17 @@ function report_session_get_offlinesession_cmids ($courseid) {
  * @param boolean if true get the cmid from the logs otherwise set NULL the cmid field
  */
 function _report_session_get_session_from_logs (&$logs, $userid, $courseid = true, $cmid = true) {
+    global $CFG;
+    
     $sessions = array();
     $start_time = 0;
     $prev_time = 0;
     foreach ($logs as $log) {
         if ($start_time == 0) $start_time = $log->time;
         if ($prev_time == 0) $prev_time = $log->time;
-        if ($log->time - $prev_time >= REPORT_SESSION_TIMEOUT) {
+        if ($log->time - $prev_time >= ($CFG->reportsession_timeout*60)) {
             $session->starttime = $start_time;
-            $session->endtime = $prev_time + REPORT_SESSION_EXTRATIME_WITHOUT_LOGOUT;
+            $session->endtime = $prev_time + ($CFG->reportsession_extratime*60);
             $session->userid = $userid;
             if ($courseid) $session->course = $log->course; else $session->course = 0;
             if ($cmid) $session->cmid = $log->cmid; else $session->cmid = 0;
@@ -550,7 +550,7 @@ function _report_session_get_session_from_logs (&$logs, $userid, $courseid = tru
     //current session if exists
     if (!empty($logs)) {
         $last_log = array_pop($logs);
-        if (time() - $last_log->time < REPORT_SESSION_TIMEOUT) {
+        if (time() - $last_log->time < ($CFG->reportsession_timeout*60)) {
             $session->starttime = $start_time;
             $session->endtime = 0;
             $session->userid = $userid;
@@ -654,14 +654,53 @@ function report_session_update_course_user_sessions ($userid, $courseid, $verbos
  */
 function report_session_is_user_online ($userid) {
     global $DB;
+    global $CFG;
+    
     $lastlog = $DB->get_field_sql('SELECT time FROM {log} WHERE userid = :userid ORDER BY time DESC LIMIT 1', array('userid' => $userid));
-    return ($lastlog !== false)&&(time() - $lastlog < REPORT_SESSION_TIMEOUT);
+    return ($lastlog !== false)&&(time() - $lastlog < ($CFG->reportsession_timeout*60));
 }
 
 function report_session_print_online_tag ($style) {
     return <<<EOD
-<div class="online-tag" style="$style">- online -</div>
+<div class="online-tag" style="$style">- now online -</div>
 EOD;
+}
+
+/**
+ * Update session calculation
+ * @return bool starting time of the current session or false if there isn't an opened session
+ */
+function report_session_get_online_users () {
+    global $DB;
+    global $CFG;
+
+    $result = array();
+    $lastlogs = $DB->get_records_sql('SELECT userid, MAX(time) AS log FROM {log} GROUP BY userid');
+    foreach ($lastlogs as $lastlog) {
+        if (time() - $lastlog->log < ($CFG->reportsession_timeout*60))
+            $result[$lastlog->userid] = $lastlog->log;
+    }
+    return $result;
+}
+
+function report_session_print_online_users() {
+    global $DB;
+    
+    $users_online = report_session_get_online_users();
+    $online_users = get_string ('online_users', 'report_session');
+    $last_log = get_string ('last_log', 'report_session');
+    echo <<<EOD
+<table>
+    <tr><th>$online_users</th><th>$last_log</th></tr>
+EOD;
+    
+    foreach ($users_online as $userid => $lastlog) {
+        $user = $DB->get_record('user', array('id' => $userid));
+        $fullname = fullname($user);
+        $time = userdate($lastlog);
+        echo "<tr><td>$fullname</td><td>$time</td></tr>\n";
+    }
+    echo '</table>';
 }
 
 /**

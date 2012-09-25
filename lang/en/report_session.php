@@ -28,9 +28,17 @@ $string['never_calculated'] = 'Last update: never calculated or nothing to repor
 $string['last_update'] = 'Last update';
 
 $string['download_excel'] = 'Download excel version';
+$string['course_activity'] = 'Course activity';  
 
 $string['online'] = 'online';
+$string['online_users'] = 'Online users';
+$string['last_log'] = 'Last log';
 $string['offline'] = 'offline';
 $string['all_session_types'] = 'All types of session';
 $string['session_type'] = 'Session type';
 $string['see_details'] = '(see details)';
+
+$string['timeout'] = 'Timeout';
+$string['description_timeout'] = 'Timeout for expiration of a session';
+$string['extratime'] = 'Extra time';
+$string['description_extratime'] = 'Minutes added to each session after the last log';

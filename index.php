@@ -115,6 +115,7 @@ if (!empty($chooselog)) {
     if ($user) {
         $u = $DB->get_record('user', array('id'=>$user, 'deleted'=>0), '*', MUST_EXIST);
         $userinfo = fullname($u, has_capability('moodle/site:viewfullnames', $context));
+        if ($user && report_session_is_user_online($user)) $userinfo .= report_session_print_online_tag('display:inline; margin:0 5px;');
     }
     if ($date) {
         $dateinfo = userdate($date, get_string('strftimedaydate'));
@@ -136,8 +137,10 @@ if (!empty($chooselog)) {
             echo $OUTPUT->heading(format_string($course->fullname) . ": $userinfo, $dateinfo (".usertimezone().")");
 //            report_session_print_mnet_selector_form($hostid, $course, $user, $date, $modname, $modid, $group, $showcourses, $showusers, $logformat);
 
-            report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, $showusers, $logformat);
+            if (!$user) report_session_print_online_users();
             
+            report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, $showusers, $logformat);
+                       
             if ($hostid == $CFG->mnet_localhost_id) {
                 report_session_print_sessions($course, $user, $date, $type, 'starttime DESC', $page, $perpage,
                         "index.php?id=$course->id&amp;chooselog=1&amp;user=$user&amp;date=$date&amp;modid=$modid&amp;type=$type&amp;group=$group",

@@ -97,9 +97,10 @@ function report_session_cron ($verbose = false) {
     $result = false;
     $page_num = 0;
     $users = get_users(true, '', true, null, 'id', '', '', $page_num, 100, 'id, username');
+
     while (!$result && !empty($users)) {
         foreach ($users as $user) {
-            if ($user->username = 'guest') continue;
+            if ($user->username == 'guest') continue;
             $result = report_session_update_user_sessions ($user->id, $verbose);
             if ($result) break;
         }
