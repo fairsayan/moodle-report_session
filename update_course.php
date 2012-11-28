@@ -31,7 +31,7 @@ if ($courseid == SITEID) {
 
 if ($userid == 0) 
     $userid = $DB->get_field_sql($sql_users_in_course . $sql_order,  array('courseid' => $courseid));
-if (!$userid) die; //no users for this course
+if (!$userid) redirect ("$CFG->wwwroot/report/session/index.php?id=$courseid", 'no users', 2); //no users for this course
 
 $course = $DB->get_record('course', array('id'=>$courseid), '*', MUST_EXIST);
 $user = $DB->get_record('user', array('id'=>$userid), '*', MUST_EXIST);

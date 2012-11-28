@@ -10,6 +10,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die;
+require_once ($CFG->dirroot. '/lib/adminlib.php');
 
 function report_session_print_selector_form($course, $selecteduser=0, $selecteddate='today',
                 $modname="", $modid=0, $type='all', $selectedgroup=-1, $showcourses=0, $showusers=0, $logformat='showashtml') {
@@ -195,7 +196,10 @@ function report_session_print_selector_form($course, $selecteduser=0, $selectedd
         }
 
         if ($showusers) {
-            echo html_writer::select($users, "user", $selecteduser, get_string("allparticipants"));
+            $new_users[-1] = get_string('all_students', 'report_session');
+            foreach ($users as $tmpindex => $tmpuser)
+                $new_users[$tmpindex] = $tmpuser;
+            echo html_writer::select($new_users, "user", $selecteduser, get_string("allparticipants"));
         }
         else {
             $users = array();
@@ -273,7 +277,7 @@ function report_session_print_sessions($course, $user=0, $date=0, $type='all', $
 
     if ($type == 'all') array_splice($table->head, 3, 0, get_string('session_type', 'report_session'));
     if ($modid == 0) array_unshift($table->head, get_string('activity'));
-    if (!$user) array_unshift($table->head, get_string('user'));
+    if ($user <= 0) array_unshift($table->head, get_string('user'));
     if ($course->id == SITEID) array_unshift($table->head, get_string('course'));
 
     $users = array();
@@ -281,7 +285,7 @@ function report_session_print_sessions($course, $user=0, $date=0, $type='all', $
         unset($row);
         
         if ($course->id == SITEID) $row[] = ($session->courseid)?$courses[$session->courseid]:$courses[SITEID];
-        if (!$user) {
+        if ($user <= 0) {
             if (!isset($users[$session->userid])) $users[$session->userid] = $DB->get_record ('user', array('id' => $session->userid));
             $row[] = fullname($users[$session->userid]);            
         }
@@ -309,7 +313,7 @@ function report_session_print_sessions($course, $user=0, $date=0, $type='all', $
 function report_session_excel_sessions ($course, $user, $date, $type, $order, $modid, $group) {
     global $CFG, $DB;
     require_once($CFG->dirroot.'/lib/excellib.class.php');
-    
+
     $modid = (int)$modid;
     $strreport = get_string('pluginname', 'report_session');
     $users = array();
@@ -357,7 +361,9 @@ function report_session_excel_sessions ($course, $user, $date, $type, $order, $m
                 $modcourse = $DB->get_record ('course', array('id' => $session->courseid));
                 $modinfo[$session->courseid] = get_fast_modinfo($modcourse);
             }
-            $activity = $modinfo[$session->courseid]->cms[$session->cmid]->name;
+            if (isset($modinfo[$session->courseid]->cms[$session->cmid]))
+                $activity = $modinfo[$session->courseid]->cms[$session->cmid]->name;
+                else $activity = $session->cmid;
         }
         
         $report->write_string($pos,0,$courses[$session->courseid]);
@@ -446,9 +452,32 @@ function report_session_get_paged ($userid, $course, $cmid, $type, $date, $order
                     'ogroupid' => $groupid,
     );
     
-    if ($userid !== 0) {
+    if ($userid > 0) {
         array_push($str_conditions,         'rs.userid = :userid');
         array_push($str_offline_conditions, 'od.userid = :ouserid');
+    } elseif ($userid == -1) { // all students
+        $str_student_conditions = array();
+        $str_offline_student_conditions = array();
+        $context = get_context_instance(CONTEXT_COURSE, $course->id);
+        $enrolled_users = get_enrolled_users($context);
+        foreach ($enrolled_users as $enrolled_user) {
+            $is_student = false;
+            $roles = get_user_roles($context, $enrolled_user->id);
+            foreach ($roles as $role) {
+                if ($role->shortname == 'student') {
+                    $is_student = true;
+                    break;
+                }
+            }
+            if ($is_student) {
+                array_push($str_student_conditions, "rs.userid = $enrolled_user->id");
+                array_push($str_offline_student_conditions, "od.userid = $enrolled_user->id");
+            }
+        }
+        if (!empty($str_student_conditions)) {
+            array_push($str_conditions, '(' . implode(' OR ', $str_student_conditions) . ')');
+            array_push($str_offline_conditions, '(' . implode(' OR ', $str_offline_student_conditions) . ')');
+        }
     }
     
     if ($cmid !== 0) array_push($str_offline_conditions, 'od.cmid = :ocmid');
@@ -798,3 +827,55 @@ function _report_session_update_sessions ($userid, $courseid = 0, $cmid = 0, $ve
     return $something_done;
 }
 
+
+/**
+ * No setting - just text.
+ */
+class admin_setting_confightmlcode extends admin_setting {
+
+    /**
+     * not a setting, just text
+     * @param string $name unique ascii name, either 'mysetting' for settings that in config, or 'myplugin/mysetting' for ones in config_plugins.
+     * @param string $heading heading
+     * @param string $information text in box
+     */
+    public function __construct($name, $heading, $information) {
+        $this->nosave = true;
+        parent::__construct($name, $heading, $information, '');
+    }
+
+    /**
+     * Always returns true
+     * @return bool Always returns true
+     */
+    public function get_setting() {
+        return true;
+    }
+
+    /**
+     * Always returns true
+     * @return bool Always returns true
+     */
+    public function get_defaultsetting() {
+        return true;
+    }
+
+    /**
+     * Never write settings
+     * @return string Always returns an empty string
+     */
+    public function write_setting($data) {
+    // do not write any setting
+        return '';
+    }
+
+    /**
+     * Returns an HTML string
+     * @return string Returns an HTML string
+     */
+    public function output_html($data, $query='') {
+        return format_admin_setting($this, $this->visiblename,
+        "<div class=\"form-text defaultsnext\">$this->description</div>",
+        '', true, '', $default, $query);
+    }
+}

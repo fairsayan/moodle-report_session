@@ -28,7 +28,8 @@ $string['never_calculated'] = 'Last update: never calculated or nothing to repor
 $string['last_update'] = 'Last update';
 
 $string['download_excel'] = 'Download excel version';
-$string['course_activity'] = 'Course activity';  
+$string['course_activity'] = 'Course activity';
+$string['all_students'] = 'All students';
 
 $string['online'] = 'online';
 $string['online_users'] = 'Online users';
@@ -42,3 +43,10 @@ $string['timeout'] = 'Timeout';
 $string['description_timeout'] = 'Timeout for expiration of a session';
 $string['extratime'] = 'Extra time';
 $string['description_extratime'] = 'Minutes added to each session after the last log';
+$string['reset_link'] = 'Reset link';
+$string['description_reset'] = <<<EOD
+<a href="$CFG->wwwroot/report/session/reset.php">Rebuild all sessions</a>.
+Be careful, when you delete all previous sessions, a cron task will start and it could take a lot of resources.
+
+EOD;
+$string['reset_done'] = "All previous online sessions are deleted";

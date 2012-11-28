@@ -112,7 +112,7 @@ if (!empty($chooselog)) {
     $userinfo = get_string('allparticipants');
     $dateinfo = get_string('alldays');
 
-    if ($user) {
+    if ($user > 0) {
         $u = $DB->get_record('user', array('id'=>$user, 'deleted'=>0), '*', MUST_EXIST);
         $userinfo = fullname($u, has_capability('moodle/site:viewfullnames', $context));
         if ($user && report_session_is_user_online($user)) $userinfo .= report_session_print_online_tag('display:inline; margin:0 5px;');
@@ -137,7 +137,7 @@ if (!empty($chooselog)) {
             echo $OUTPUT->heading(format_string($course->fullname) . ": $userinfo, $dateinfo (".usertimezone().")");
 //            report_session_print_mnet_selector_form($hostid, $course, $user, $date, $modname, $modid, $group, $showcourses, $showusers, $logformat);
 
-            if (!$user) report_session_print_online_users();
+            if ($user <= 0) report_session_print_online_users();
             
             report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, $showusers, $logformat);
                        
@@ -148,7 +148,7 @@ if (!empty($chooselog)) {
             } else {
 //                print_mnet_log($hostid, $id, $user, $date, 'starttime DESC', $page, $perpage, "", $modname, $modid, $group);
             }
-            report_session_print_forceupdate(($user)?$u->id:NULL, $course->id, $modid);
+            report_session_print_forceupdate(($user > 0)?$u->id:NULL, $course->id, $modid);
             
             break;
         case 'downloadasexcel':
@@ -173,6 +173,7 @@ if (!empty($chooselog)) {
     echo $OUTPUT->heading(get_string('choosesessions', 'report_session') .':');
 
     report_session_print_selector_form($course, $user, $date, $modname, $modid, $type, $group, $showcourses, 1, $logformat);
+    report_session_print_forceupdate(NULL, $course->id, 0);
 }
 
 echo $OUTPUT->footer();
